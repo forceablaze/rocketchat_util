@@ -63,7 +63,7 @@ def getJoinedChannelsMentions():
         for message in mentions[channel]:
             print u'\tmessage from {}\t{}\n\t{}\n'.format(
                 message['u']['name'], message['ts'],
-                message['msg']).encode('utf8')
+                message['msg']).encode(config['encode'])
 
 def doLogin():
     user = raw_input('Please input username:')
@@ -76,4 +76,3 @@ if __name__ == '__main__':
     print 'Rocket.Chat:', RC.info()['info']['version']
     doLogin()
     getJoinedChannelsMentions()
-
