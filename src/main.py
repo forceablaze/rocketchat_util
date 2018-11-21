@@ -127,7 +127,7 @@ def getJoinedChannelsMentions():
         for message in mentions[channel]:
             print u'\tmessage from {}\t{}\n\t{}\n'.format(
                 message['u']['name'], message['ts'],
-                message['msg']).encode(config['encode'])
+                message['msg'])
 
 def doLogin():
     user = raw_input('Please input username:')
