@@ -2,6 +2,10 @@
 #-*- coding: utf-8 -*-
 
 import datetime
+
+# calc epoch time
+import calendar
+
 import sqlite3
 
 class MessageModel(object):
@@ -20,6 +24,7 @@ class MessageModel(object):
                 messageId TEXT unique,
                 roomId TEXT,
                 timestamp TEXT,
+                epoch INT,
                 author TEXT,
                 text TEXT)
         ''')
@@ -33,20 +38,29 @@ class MessageModel(object):
             "SELECT timestamp, author, text, messageId from messages WHERE messageId=:id",
                 {"id": self._currentMessageId}).fetchone()
 
+    def parseTimestamp(self, timeStr):
+        return datetime.datetime.strptime(
+                                timeStr[:19], "%Y-%m-%dT%H:%M:%S")
 
     def add(self, message):
         try:
             self._db.cursor().execute('''
-                INSERT INTO messages(messageId, roomId, timestamp, text, author)
-                VALUES(:_id, :rid, :ts, :msg, :author)''',
+                INSERT INTO messages(messageId, roomId, timestamp, epoch, text, author)
+                VALUES(:_id, :rid, :ts, :epoch, :msg, :author)''',
                 { '_id': message['_id'],
                   'rid': message['rid'],
                   'ts': message['ts'],
+                  # convert to epoch time
+                  'epoch': calendar.timegm(self.parseTimestamp(message['ts']).timetuple()),
                   'msg': message['msg'],
                   'author': message['u']['name']})
             self._db.commit()
         except sqlite3.IntegrityError:
             pass
+
+    def getMessaegOrderbyTime(self):
+        return self._db.cursor().execute(
+            "SELECT timestamp, author, text, messageId from messages ORDER BY epoch ASC").fetchall()
 
     def get_summary(self, channelId = None):
         if channelId is None:
@@ -58,8 +72,8 @@ class MessageModel(object):
         if items != []:
             return list(map(lambda x:
                                     (u"{} from {}:{}".format(
-                                        datetime.datetime.strptime(x[0][:19], "%Y-%m-%dT%H:%M:%S").
-                                                            strftime("%Y-%m-%d %H:%M:%S"),
+                                        self.parseTimestamp(x[0]).
+                                            strftime("%Y-%m-%d %H:%M:%S"),
                                         # from {}
                                         x[1],
                                         # summary text
