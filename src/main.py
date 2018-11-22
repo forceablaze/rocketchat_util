@@ -5,6 +5,7 @@ import sys
 import getpass
 import json
 import datetime
+import csv
 
 from optparse import OptionParser
 from rocketchat.api import API
@@ -24,6 +25,8 @@ from time import sleep
 
 from Models import ChannelModel
 from Models import MessageModel
+
+from csvstream.UnicodeWriter import UnicodeWriter
 
 RC = None
 config = None
@@ -149,6 +152,18 @@ def retrieveMentionsMessages(channelId, userId = None):
     return messages
 
 
+def retrieveMessageAndExportToCSV():
+
+    channels._retrieve()
+    msgs = messages.getMessaegOrderbyTime()
+
+    with open('output.csv' , 'w') as csvfile:
+        writer = UnicodeWriter(csvfile)
+        writer.writerow(['Time', 'Channel', 'From', 'Message'])
+
+        for msg in msgs:
+            writer.writerow([msg['timestamp'], 'Channel', msg['author'], msg['text']])
+
 def getJoinedChannelsMentions():
     data = RC.channels_list_joined()
     user_info = RC.users_info()
@@ -207,10 +222,16 @@ if __name__ == "__main__":
         action="store_true", dest = "interactive",
         help = "enable interactive mode")
 
+    parser.add_option("-e", "--export", default=False,
+        action="store_true", dest = "export",
+        help = "export to file")
+
     (options, args) = parser.parse_args()
 
     doLogin()
     if options.interactive is True:
         interactiveMode()
+    elif options.export is True:
+        retrieveMessageAndExportToCSV()
     else:
         getJoinedChannelsMentions()
