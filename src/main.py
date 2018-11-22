@@ -14,6 +14,8 @@ from asciimatics.widgets import ListBox
 from asciimatics.widgets import Layout
 from asciimatics.widgets import Button
 from asciimatics.widgets import Widget
+from asciimatics.widgets import Text
+from asciimatics.widgets import TextBox
 
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
@@ -26,6 +28,38 @@ from Models import MessageModel
 RC = None
 config = None
 
+class MessageView(Frame):
+    def __init__(self, screen, model):
+        super(MessageView, self).__init__(screen,
+                screen.height * 2 // 3,
+                screen.width * 2 // 3,
+                on_load=self._load,
+                hover_focus=True,
+                can_scroll=False,
+                title="Message",
+                reduce_cpu=True)
+
+        self._model = model
+
+        layout = Layout([100], fill_frame=True)
+        self.add_layout(layout)
+        layout.add_widget(Text("Time:", "timestamp"))
+        layout.add_widget(Text("From:", "author"))
+        layout.add_widget(TextBox(Widget.FILL_FRAME,
+            None, "text", as_string = True, line_wrap = True ))
+
+        layout.add_widget(Button("Back", self._back))
+
+        self.fix()
+
+    def _load(self):
+        self.data = self._model.getCurrentMessage()
+        if 'text' in self.data:
+            self.data['text'] = self.data['text'].replace('\n', '\n\r')
+
+    def _back(self):
+        raise NextScene("Main")
+
 class View(Frame):
     def __init__(self, screen, channelModel, messageModel):
         super(View, self).__init__(screen,
@@ -34,6 +68,7 @@ class View(Frame):
                 title="Channel List")
         self._channelModel = channelModel
         self._messageModel = messageModel
+        self._initialized = False
 
         self._list_view = ListBox(
             Widget.FILL_FRAME,
@@ -47,6 +82,7 @@ class View(Frame):
             messageModel.get_summary(),
             name="messages",
             add_scroll_bar=True,
+            on_select=self._on_message_select,
             on_change=self._on_pick)
 
         layout = Layout([1, 8, 1])
@@ -62,11 +98,18 @@ class View(Frame):
         channelId = self._list_view.value
         self._messageListView.options = self._messageModel.get_summary(channelId)
 
+    def _on_message_select(self):
+        messageId = self._messageListView.value
+        self._messageModel.setCurrentMessageId(messageId)
+        raise NextScene('Message')
+
     def _on_pick(self):
         pass
 
     def _retrieve(self):
-        self._channelModel._retrieve()
+        if self._initialized is False:
+            self._channelModel._retrieve()
+            self._initialized = True
         self._list_view.options = self._channelModel.get_summary()
 
     @staticmethod
@@ -131,7 +174,7 @@ def getJoinedChannelsMentions():
 
 def doLogin():
     user = raw_input('Please input username:')
-    password = getpass.getpass("Please input password：")
+    password = getpass.getpass("Please input password:")
     data = RC.login(user, password)
 
 config = loadJSONConfig()
@@ -143,7 +186,8 @@ def frame(screen):
     scenes = [
         Scene([View(screen,
                     channelModel = channels,
-                    messageModel = messages)], -1, name = 'Main')
+                    messageModel = messages)], -1, name = 'Main'),
+        Scene([MessageView(screen, model = messages)], -1, name = 'Message')
     ]
     screen.play(scenes)
 

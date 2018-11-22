@@ -11,6 +11,8 @@ class MessageModel(object):
         self._db = sqlite3.connect(':memory:')
         self._db.row_factory = sqlite3.Row
 
+        self._currentMessageId = None
+
         # Create the basic contact table.
         self._db.cursor().execute('''
             CREATE TABLE messages(
@@ -22,6 +24,15 @@ class MessageModel(object):
                 text TEXT)
         ''')
         self._db.commit()
+
+    def setCurrentMessageId(self, id):
+        self._currentMessageId = id
+
+    def getCurrentMessage(self):
+        return self._db.cursor().execute(
+            "SELECT timestamp, author, text, messageId from messages WHERE messageId=:id",
+                {"id": self._currentMessageId}).fetchone()
+
 
     def add(self, message):
         try:
@@ -41,8 +52,21 @@ class MessageModel(object):
         if channelId is None:
             return [ ('None', 1)]
 
-        return self._db.cursor().execute(
-            "SELECT messageId, id from messages WHERE roomId=:id", {"id": channelId}).fetchall()
+        items = self._db.cursor().execute(
+            "SELECT timestamp, author, text, messageId from messages WHERE roomId=:id", {"id": channelId}).fetchall()
+
+        if items != []:
+            return list(map(lambda x:
+                                    (u"{} from {}:{}".format(
+                                        datetime.datetime.strptime(x[0][:19], "%Y-%m-%dT%H:%M:%S").
+                                                            strftime("%Y-%m-%d %H:%M:%S"),
+                                        # from {}
+                                        x[1],
+                                        # summary text
+                                        x[2].strip().replace('\n', ' ')[:50]),
+                                    # message Id
+                                    x[3]), items))
+        return [("None", 0)]
 
     def _retrieve(self, channelId, userId = None, mention = False):
         messages = []
