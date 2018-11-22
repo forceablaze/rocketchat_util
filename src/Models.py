@@ -60,7 +60,7 @@ class MessageModel(object):
 
     def getMessaegOrderbyTime(self):
         return self._db.cursor().execute(
-            "SELECT timestamp, author, text, messageId from messages ORDER BY epoch ASC").fetchall()
+            "SELECT timestamp, author, text, messageId, roomId from messages ORDER BY epoch ASC").fetchall()
 
     def get_summary(self, channelId = None):
         if channelId is None:
@@ -123,6 +123,11 @@ class ChannelModel(object):
 
         # Current contact when editing.
         self.current_id = None
+
+    def getChannel(self, channelId):
+        return self._db.cursor().execute(
+            "SELECT name, roomId from channels WHERE roomId=:id",
+                {"id": channelId}).fetchone()
 
     def get_summary(self):
         return self._db.cursor().execute(

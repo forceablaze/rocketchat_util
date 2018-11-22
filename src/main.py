@@ -162,7 +162,12 @@ def retrieveMessageAndExportToCSV():
         writer.writerow(['Time', 'Channel', 'From', 'Message'])
 
         for msg in msgs:
-            writer.writerow([msg['timestamp'], 'Channel', msg['author'], msg['text']])
+            writer.writerow([
+                msg['timestamp'],
+                # query channel name
+                channels.getChannel(msg['roomId'])['name'],
+                msg['author'],
+                msg['text']])
 
 def getJoinedChannelsMentions():
     data = RC.channels_list_joined()
